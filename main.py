@@ -1,5 +1,8 @@
 ﻿import json
 from sikuli.Sikuli import *
+from java.awt import Robot
+from java.awt import Color
+from java.awt import Rectangle
 
 
 tableList=[]
@@ -16,14 +19,14 @@ def readConfig():
     username=buConfigObj['username']
     password=buConfigObj['password']
     print buurl
-    openWebSiter(buurl)
+    #openWebSiter(buurl)
     loginAndOpenGame(username,password)
 
 def openWebSiter(buurl):
     openApp(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe "+buurl)
     
 def loginAndOpenGame(username,password):
-    
+    '''
     wait("loginBtn.png", 10)
     
     if screenRegion.find("account_cache.png"):
@@ -40,7 +43,7 @@ def loginAndOpenGame(username,password):
     screenRegion.find("SAGameBtn.png").click()#沙龍魚樂
     wait("bigRoadView.png", FOREVER)#等大路檢視
     screenRegion.find("bigRoadView.png").click()#多人頭注
-    
+    '''
     
     #TODO:抽到設定檔 
     tableList.append(TableObj("BU002", "Table 1", 195,372,401,95,16,16,6,25))
@@ -50,6 +53,9 @@ def loginAndOpenGame(username,password):
     
     #getTableInfo(tableList[0])
     #getTableInfo(tableList[1])
+    
+    
+
     
     
     
@@ -62,8 +68,12 @@ class TableObj:
     
     bigRoadMaxHCount=0
     bigRoadMaxWCount=0
+    bigRoadUnitW=0
+    bigRoadUnitH=0
+    patternW=6
+    patternH=8
     def __init__(self, _BUCode, _tableName, startX,startY,
-                 tableW,tableH,bigRoadUnitW,bigRoadUnitH,_bigRoadMaxHCount,_bigRoadMaxWCount):
+                 tableW,tableH,_bigRoadUnitW,_bigRoadUnitH,_bigRoadMaxHCount,_bigRoadMaxWCount):
         #直的 有 幾個格子= maxHCount
         #橫的 有 幾個格子= maxWcount
         print(_tableName+" Create TableObj!!")
@@ -76,7 +86,9 @@ class TableObj:
         self.tableRegion.setH(tableH)
         self.bigRoadMaxHCount=_bigRoadMaxHCount
         self.bigRoadMaxWCount=_bigRoadMaxWCount
-        self.createBigRoadRegionUnit(startX,startY,bigRoadUnitW,bigRoadUnitH)
+        self.bigRoadUnitW=_bigRoadUnitW
+        self.bigRoadUnitH=_bigRoadUnitH
+        self.createBigRoadRegionUnit(startX,startY)
         self.tableRegion.onChange(self.roadChange)#listen road change
         #self.tableRegion.onAppear("countDownStart.png", self.roadChange)#倒數
         self.tableRegion.observe(FOREVER ,background=True)
@@ -86,17 +98,41 @@ class TableObj:
         for y in xrange(0, self.bigRoadMaxHCount): #直6
             for x in xrange(0, self.bigRoadMaxWCount): #橫25
                 _region=self.bigRoadRegionList[y][x]
-                if _region.exists(Pattern("bankerball.png").similar(0.7),0)!=None :
-                    self.bigRoadStrList[y][x]="B"
-                elif _region.exists(Pattern("playerball.png").similar(0.7),0)!=None :
-                    self.bigRoadStrList[y][x]="P"
+                if _region.exists(Pattern("bankerball.png").similar(0.7),0)!=None or _region.exists(Pattern("playerball.png").similar(0.7),0)!=None :
+                    print "got Pattern"
+                    ps=_region.getLastMatch()
+                    dx=self.patternW/2*-1
+                    dy=self.patternH/2*-1
+                    ps.targetOffset(dx, dy)
+                    ps.getTarget()
+                    result = self.checkColor(ps)
+                    self.bigRoadStrList[y][x]=result #"B" or "P"
+              
                 #_region.getLastMatch().highlight()
             print ','.join(self.bigRoadStrList[y])
         #print("self.bigRoadRegionList: "+self.bigRoadRegionList)
                     
-                    
+    def checkColor(self, SCREEN):
+        print" checkColor !!"
+        i = Robot().createScreenCapture(Rectangle(SCREEN.getX(),
+                    SCREEN.getY(), self.patternW, self.patternH))
+        bColor = Color(200, 4, 4)
+        pColor = Color(45, 48, 177)
+        print"self.patternW:"+self.patternW+ " self.patternH:"+self.patternH
+        for x in range(0, self.patternW):
+            for y in range(0, self.patternH):
+                print" color"
+                print i.getRGB(x, y)
+                if bColor == Color(i.getRGB(x, y)):
+                    return "B"
+                if pColor == Color(i.getRGB(x, y)):
+                    return "P"
+                   
         
-    def createBigRoadRegionUnit(self, startX,startY,uW,uH):
+    def createBigRoadRegionUnit(self, startX,startY):
+        uW=self.bigRoadUnitW
+        uH=self.bigRoadUnitH
+        
         self.bigRoadRegionList = []
         self.bigRoadStrList=[]
         px=startX
